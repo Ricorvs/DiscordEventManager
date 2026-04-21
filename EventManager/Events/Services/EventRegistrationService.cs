@@ -64,8 +64,7 @@ namespace EventManager.Events.Services
             DiscordEvent discordEvent = new(arg);
             var channelId = await guildConfiguration.GetEventChannelForGuild(arg.GuildId);
             discordEvent.ChannelId = channelId!.Value;
-            var invite = await restclient.CreateGuildChannelInviteAsync(channelId!.Value);
-            discordEvent.InviteUrl = $"https://discord.gg/{invite.Code}?event={discordEvent.EventId}";
+            discordEvent.InviteUrl = $"https://discord.com/events/{arg.GuildId}/{discordEvent.EventId}";
             var message = await restclient.SendMessageAsync(channelId!.Value, new() { Content = discordEvent.InviteUrl });
             discordEvent.MessageId = message.Id;
             var threadChannel = await restclient.CreateGuildThreadAsync(channelId!.Value, message.Id, new(arg.Name));
