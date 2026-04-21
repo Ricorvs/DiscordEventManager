@@ -29,7 +29,7 @@ namespace EventManager.GuildConfiguration
             await dbContext.SaveChangesAsync();
         }
 
-        public async Task<GuildConfiguration> SetGuildThreadRefreshTimeAsync(ulong guildId, TimeOnly refreshTime)
+        public async Task<GuildConfiguration> SetGuildThreadRefreshTimeAsync(ulong guildId, TimeOnly? refreshTime)
         {
             using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var existingConfig = await dbContext.GuildConfiguration.FirstOrDefaultAsync(config => config.GuildId == guildId);

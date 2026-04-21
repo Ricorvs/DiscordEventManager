@@ -23,9 +23,11 @@ namespace EventManager.GuildConfiguration
             }
             StringBuilder builder = new();
             builder.AppendLine($"Eventchannel: <#{config.EventChannel}>");
+            string refreshTime = config.ThreadRefreshTime == null ? "Disabled" : config.ThreadRefreshTime.Value.ToString("HH:mm")!;
+            builder.AppendLine($"Thread refresh time: {refreshTime}");
+            builder.AppendLine($"Thread keep alive time: {config.ThreadKeepAliveTime ?? 0} days");
             await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent(builder.ToString()));
         }
-
 
         [SlashCommand("set-guild-eventchannel", "Set the current eventchannel for guild")]
         public async Task SetGuildEventChannelAsync([SlashCommandParameter(Description = "Channel to use for event threads")] TextGuildChannel channel)
@@ -34,20 +36,31 @@ namespace EventManager.GuildConfiguration
             await guildConfigurationService.SetGuildEventChannelAsync(Context.Interaction.GuildId!.Value, channel.Id);
             await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set eventchannel to {channel}"));
         }
+
         [SlashCommand("set-guild-threadrefreshtime", "Set the thread refresh time for guild")]
-        public async Task SetGuildEventChannelAsync([SlashCommandParameter(Description = "Time of day thread refresh should happen", TypeReaderType = typeof(TimeOnlyTypeReader))] TimeOnly refreshTime)
+        public async Task SetGuildThreadRefreshTime([SlashCommandParameter(Description = "Time of day thread refresh should happen", TypeReaderType = typeof(TimeOnlyTypeReader))] TimeOnly refreshTime)
         {
             await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
             var currentConfig = await guildConfigurationService.SetGuildThreadRefreshTimeAsync(Context.Interaction.GuildId!.Value, refreshTime);
             refreshThreadsBackgroundService.UpdateTimerTrigger(Context.Interaction.GuildId.Value, currentConfig);
             await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set refresh time to {refreshTime:HH:mm}"));
         }
+
+        [SlashCommand("disable-guild-threadrefresh", "Disable the thread refresh time for guild")]
+        public async Task DisableGuildThreadRefresh()
+        {
+            await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
+            var currentConfig = await guildConfigurationService.SetGuildThreadRefreshTimeAsync(Context.Interaction.GuildId!.Value, null);
+            refreshThreadsBackgroundService.UpdateTimerTrigger(Context.Interaction.GuildId.Value, currentConfig);
+            await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Disabled tread refresh"));
+        }
+
         [SlashCommand("set-guild-threadkeepalivetime", "Set the current keep alive time for guild threads")]
         public async Task SetGuildThreadKeepAliveTimeAsync([SlashCommandParameter(Description = "How many days event threads should be kept alive after the event has finished", MinValue = 0)] int keepAliveTime)
         {
             await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
             await guildConfigurationService.SetGuildThreadKeepAliveTimeAsync(Context.Interaction.GuildId!.Value, keepAliveTime);
-            await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set refresh time to {keepAliveTime}"));
+            await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set thread keep alive time to {keepAliveTime} days"));
         }
     }
 }

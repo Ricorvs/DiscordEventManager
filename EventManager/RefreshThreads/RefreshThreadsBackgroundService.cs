@@ -37,17 +37,14 @@ namespace EventManager.RefreshThreads
 
         private static TimeSpan GetNextTriggerFromConfig(GuildConfiguration.GuildConfiguration? config)
         {
-            TimeSpan nextTrigger = TimeSpan.FromDays(1);
-
-            if (config?.ThreadRefreshTime != null)
+            if (config?.ThreadRefreshTime == null)
             {
-                DateTime target = new DateTime(DateTime.Today.Ticks)
-                                    .Add(config.ThreadRefreshTime.Value.ToTimeSpan());
-                nextTrigger = target < DateTime.Now
-                            ? target.AddDays(1) - DateTime.Now
-                            : target - DateTime.Now;
+                return Timeout.InfiniteTimeSpan;
             }
-            return nextTrigger;
+            DateTime target = new DateTime(DateTime.Today.Ticks).Add(config.ThreadRefreshTime.Value.ToTimeSpan());
+            return target < DateTime.Now
+                  ? target.AddDays(1) - DateTime.Now
+                  : target - DateTime.Now;
         }
 
         public void UpdateTimerTrigger(ulong guildId, GuildConfiguration.GuildConfiguration? config)
@@ -65,7 +62,10 @@ namespace EventManager.RefreshThreads
             var guilds = client.GetCurrentUserGuildsAsync();
             await foreach (var guild in guilds)
             {
-                _timers.Add(guild.Id, new(TimerTriggered, guild, 0, Timeout.Infinite));
+                var config = await guildConfigurationService.GetGuildConfigurationAsync(guild.Id);
+                var nextTrigger = GetNextTriggerFromConfig(config);
+                logger.LogInformation("Initializing thread refresh timer for guild {guild}, will trigger in {timeremaining}", guild.Id, nextTrigger);
+                _timers.Add(guild.Id, new(TimerTriggered, guild, nextTrigger, Timeout.InfiniteTimeSpan));
             }
         }
     }

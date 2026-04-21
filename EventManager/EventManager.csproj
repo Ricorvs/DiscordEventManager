@@ -22,6 +22,9 @@
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="appsettings.production.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="appsettings.development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

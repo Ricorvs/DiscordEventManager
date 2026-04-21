@@ -37,13 +37,17 @@ namespace EventManager.RefreshThreads
             {
                 return true;
             }
+            var endTime = (ev.EndDateTime ?? ev.StartDateTime);
+            if (endTime > DateTime.Now)
+            {
+                return false;
+            }
             var config = await guildConfigurationService.GetGuildConfigurationAsync(ev.GuildId!);
             if (config == null || config.ThreadKeepAliveTime == null)
             {
                 return false;
             }
-            var endTime = (ev.EndDateTime ?? ev.StartDateTime).AddDays(config.ThreadKeepAliveTime.Value);
-
+            endTime = endTime.AddDays(config.ThreadKeepAliveTime.Value);
             return DateTime.Now <= endTime;
         }
 
