@@ -59,6 +59,35 @@ namespace EventManager.Events.Services
             await TaskQueue.Enqueue(() => HandleEventUserChanged(eventId, userId, false));
         }
 
+        public async Task<bool> SetEventDate(ulong channelId, DateTime date)
+        {
+            var discordEvent = await eventService.GetEventFromThreadIdAsync(channelId);
+            if (discordEvent == null)
+            {
+                logger.LogInformation("No event associated with channel {channel}, could not set eventdate", channelId);
+                return false;
+            }
+            if (discordEvent.Expired)
+            {
+                logger.LogInformation("Event {event} has already been completed, could not set eventdate", discordEvent.Name);
+                return false;
+            }
+
+            DateTime newStartDateTime = new(date.Year, date.Month, date.Day, discordEvent.StartDateTime.Hour, discordEvent.StartDateTime.Minute, discordEvent.StartDateTime.Second);
+            DateTime? newEndDateTime = null;
+            if (discordEvent.EndDateTime != null)
+            {
+                newEndDateTime = newStartDateTime.Add(discordEvent.EndDateTime.Value - discordEvent.StartDateTime);
+            }
+            logger.LogInformation("Setting eventdate for event {event} to {startdate}-{enddate}", discordEvent.Name, newStartDateTime, newEndDateTime);
+            await restclient.ModifyGuildScheduledEventAsync(discordEvent.GuildId, discordEvent.EventId, ev =>
+            {
+                ev.ScheduledStartTime = newStartDateTime.ToLocalTime();
+                ev.ScheduledEndTime = newEndDateTime?.ToLocalTime();
+            });
+            return true;
+        }
+
         private async Task<(DiscordEvent, GuildThread)> HandleRegisterEvent(GuildScheduledEvent arg)
         {
             DiscordEvent discordEvent = new(arg);

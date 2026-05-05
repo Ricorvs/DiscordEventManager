@@ -64,6 +64,23 @@ namespace EventManager.GuildConfiguration
             }
             await dbContext.SaveChangesAsync();
         }
+        public async Task SetGuildPinDateThresholdAsync(ulong guildId, int? keepAliveTime)
+        {
+            using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var existingConfig = await dbContext.GuildConfiguration.FirstOrDefaultAsync(config => config.GuildId == guildId);
+
+            if (existingConfig == null)
+            {
+                existingConfig ??= new() { GuildId = guildId, PinDateThreshold = keepAliveTime };
+                dbContext.GuildConfiguration.Add(existingConfig);
+            }
+            else
+            {
+                existingConfig.PinDateThreshold = keepAliveTime;
+                dbContext.GuildConfiguration.Attach(existingConfig).State = EntityState.Modified;
+            }
+            await dbContext.SaveChangesAsync();
+        }
 
         public async Task<ulong?> GetEventChannelForGuild(ulong guildId)
         {

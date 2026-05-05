@@ -62,5 +62,21 @@ namespace EventManager.GuildConfiguration
             await guildConfigurationService.SetGuildThreadKeepAliveTimeAsync(Context.Interaction.GuildId!.Value, keepAliveTime);
             await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set thread keep alive time to {keepAliveTime} days"));
         }
+
+        [SlashCommand("set-guild-pindatethreshold", "Set the threshold for the 📌 reaction to be added to dates")]
+        public async Task SetGuildPinDateThreshold([SlashCommandParameter(Description = "How many people have to be available for the 📌 reaction to be added", MinValue = 1)] int threshold)
+        {
+            await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
+            await guildConfigurationService.SetGuildPinDateThresholdAsync(Context.Interaction.GuildId!.Value, threshold);
+            await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Set 📌 reaction threshold to {threshold}"));
+        }
+
+        [SlashCommand("disable-guild-pindatethreshold", "Disable the threshold for the 📌 reaction to be added to dates")]
+        public async Task DisableGuildPinDateThreshold()
+        {
+            await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
+            await guildConfigurationService.SetGuildPinDateThresholdAsync(Context.Interaction.GuildId!.Value, null);
+            await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent($"Disabled 📌 reaction threshold"));
+        }
     }
 }

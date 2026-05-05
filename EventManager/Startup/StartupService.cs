@@ -41,7 +41,7 @@ namespace EventManager.Startup
 
             foreach (var ev in events)
             {
-                var discordEvent = await eventRegistrationService.HandleEventChanged(ev);
+                var discordEvent = await eventRegistrationService.HandleEventAdded(ev);
                 var users = ev.GetUsersAsync();
 
                 await foreach (var user in users)

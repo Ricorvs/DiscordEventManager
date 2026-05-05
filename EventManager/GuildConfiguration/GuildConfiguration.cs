@@ -10,5 +10,6 @@ namespace EventManager.GuildConfiguration
         public ulong? EventChannel { get; set; }
         public int? ThreadKeepAliveTime { get; set; }
         public TimeOnly? ThreadRefreshTime { get; set; }
+        public int? PinDateThreshold { get; set; }
     }
 }
