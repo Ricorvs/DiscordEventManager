@@ -1,5 +1,5 @@
-﻿using EventManager.GenerateDates.TypeReaders.DateTypeReader;
-using EventManager.RefreshThreads;
+﻿using EventManager.DailyTasks;
+using EventManager.GenerateDates.TypeReaders.DateTypeReader;
 using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
@@ -8,7 +8,7 @@ using System.Text;
 namespace EventManager.GuildConfiguration
 {
     public class GuildConfigurationModule(GuildConfigurationService guildConfigurationService,
-                                          RefreshThreadsBackgroundService refreshThreadsBackgroundService) : ApplicationCommandModule<ApplicationCommandContext>
+                                          DailyTasksBackgroundService refreshThreadsBackgroundService) : ApplicationCommandModule<ApplicationCommandContext>
     {
         [SlashCommand("get-guild-config", "Get the current guild configuration")]
         public async Task GetGuildConfigAsync()
@@ -26,6 +26,8 @@ namespace EventManager.GuildConfiguration
             string refreshTime = config.ThreadRefreshTime == null ? "Disabled" : config.ThreadRefreshTime.Value.ToString("HH:mm")!;
             builder.AppendLine($"Thread refresh time: {refreshTime}");
             builder.AppendLine($"Thread keep alive time: {config.ThreadKeepAliveTime ?? 0} days");
+            string pinDateThreshold = config.PinDateThreshold == null ? "Disabled" : $"{config.PinDateThreshold} available";
+            builder.AppendLine($"Pin date threshold: {pinDateThreshold}");
             await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent(builder.ToString()));
         }
 

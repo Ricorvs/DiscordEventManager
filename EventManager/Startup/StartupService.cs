@@ -1,5 +1,5 @@
-﻿using EventManager.Events.Services;
-using EventManager.RefreshThreads;
+﻿using EventManager.DailyTasks.RefreshThreads;
+using EventManager.Events.Services;
 using Microsoft.Extensions.Hosting;
 using NetCord;
 using NetCord.Rest;

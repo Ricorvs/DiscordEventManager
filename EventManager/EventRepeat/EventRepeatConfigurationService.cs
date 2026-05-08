@@ -44,7 +44,8 @@ namespace EventManager.EventRepeat
         public async Task<EventRepeatInfo?> SetAutomaticDateGenerationForEventAsync(int eventId,
                                                                   DayOfWeek startFrom,
                                                                   DayOfWeekFlags dayOfWeekFlags,
-                                                                  int numberOfWeeks)
+                                                                  int numberOfWeeks,
+                                                                  int? delay = null)
         {
             using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var existing = await dbContext.RepeatInfo
@@ -57,6 +58,7 @@ namespace EventManager.EventRepeat
             existing.NumberOfWeeksToGenerate = numberOfWeeks;
             existing.DaysOfWeekPattern = dayOfWeekFlags.ToPattern();
             existing.TargetDayOfWeek = startFrom;
+            existing.DelayDateGeneration = delay;
             dbContext.RepeatInfo.Attach(existing).State = EntityState.Modified;
             await dbContext.SaveChangesAsync();
             return existing;

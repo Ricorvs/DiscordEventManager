@@ -25,10 +25,11 @@ namespace EventManager.EventRepeat
             [SlashCommandParameter(TypeReaderType = typeof(EventTypeReader), Description = "Event to edit")] int eventId,
             [SlashCommandParameter(Description = "Which day of the week auto generation should start from")] DayOfWeek startFrom,
             [SlashCommandParameter(Name = "days", Description = "Days to generate", TypeReaderType = typeof(DayOfWeekTypeReader))] DayOfWeekFlags dayOfWeekFlags,
-            [SlashCommandParameter(MinValue = 1, MaxValue = 4, Description = "Number of weeks to generate for")] int numberOfWeeks)
+            [SlashCommandParameter(MinValue = 1, MaxValue = 4, Description = "Number of weeks to generate for")] int numberOfWeeks,
+            [SlashCommandParameter(MinValue = 1, Description = "Number of days to wait before generating")] int? delay = null)
         {
             await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
-            var repeatInfo = await repeatConfigurationService.SetAutomaticDateGenerationForEventAsync(eventId, startFrom, dayOfWeekFlags, numberOfWeeks);
+            var repeatInfo = await repeatConfigurationService.SetAutomaticDateGenerationForEventAsync(eventId, startFrom, dayOfWeekFlags, numberOfWeeks, delay);
             if (repeatInfo == null)
             {
                 await Context.Interaction.ModifyResponseAsync(msg => msg.WithContent("There is no repetition configured for this event"));

@@ -1,11 +1,12 @@
 ﻿using EventManager.Calendar;
+using EventManager.DailyTasks;
+using EventManager.DailyTasks.RefreshThreads;
 using EventManager.DbContext;
 using EventManager.EventRepeat;
 using EventManager.Events;
 using EventManager.Events.Services;
 using EventManager.GenerateDates;
 using EventManager.GuildConfiguration;
-using EventManager.RefreshThreads;
 using EventManager.Startup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -44,14 +45,16 @@ builder.Services
     .AddTransient<RefreshThreadsService>()
     .AddTransient<GenerateDatesService>()
     .AddTransient<GuildConfigurationService>()
-    .AddSingleton<RefreshThreadsBackgroundService>()
+    .AddSingleton<DailyTasksBackgroundService>()
+    .AddSingleton<IDailyGuildTask, RefreshThreadsDailyTask>()
+    .AddSingleton<IDailyGuildTask, EventRepeatDailyTask>()
     .AddHostedService<StartupService>();
 
 builder.Services.AddControllers();
 
 var host = builder.Build();
 
-await host.Services.GetRequiredService<RefreshThreadsBackgroundService>().StartAsync(CancellationToken.None);
+await host.Services.GetRequiredService<DailyTasksBackgroundService>().StartAsync(CancellationToken.None);
 host.AddModules(typeof(Program).Assembly);
 host.MapControllers();
 

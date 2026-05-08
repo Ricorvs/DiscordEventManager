@@ -1,4 +1,5 @@
 ﻿using EventManager.Events.Models;
+using EventManager.Events.Services;
 using EventManager.GenerateDates;
 using EventManager.GenerateDates.TypeReaders.DayOfWeekTypeReader;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ using NetCord.Rest;
 namespace EventManager.EventRepeat
 {
     public class EventRepeatService(RestClient client,
+                                    EventService eventService,
                                     GenerateDatesService generateDatesService,
                                     ILogger<EventRepeatService> logger)
     {
@@ -33,6 +35,7 @@ namespace EventManager.EventRepeat
 
             logger.LogInformation("Repeating event {event}", ev.Name);
             string eventname = ev.Name!.Contains(Constants.AutoRepeatPrefix) ? ev.Name : $"{Constants.AutoRepeatPrefix}{ev.Name}";
+            DateTime originalStartDateTime = ev.StartDateTime;
             (var newStart, var newEnd) = GetNewStartAndEndTime(ev);
 
             try
@@ -43,7 +46,10 @@ namespace EventManager.EventRepeat
                 ev.AutomaticallyCreated = true;
                 var message = await client.GetMessageAsync(ev.ChannelId, ev.MessageId);
                 await message.ModifyAsync(msg => msg.WithContent(ev.InviteUrl));
-                await GenerateDatesIfConfigured(ev);
+                if (originalStartDateTime.ToLocalTime() <= DateTime.Now)
+                {
+                    await GenerateDatesIfConfigured(ev);
+                }
             }
             catch (Exception e)
             {
@@ -55,7 +61,23 @@ namespace EventManager.EventRepeat
 
         private async Task GenerateDatesIfConfigured(DiscordEvent ev)
         {
-            if (ev.RepeatInfo!.HasAutomaticDateGeneration && DayOfWeekFlagsExtensions.TryParse(ev.RepeatInfo.DaysOfWeekPattern, out DayOfWeekFlags result))
+            if (!ev.RepeatInfo!.HasAutomaticDateGeneration)
+            {
+                return;
+            }
+            if (ev.RepeatInfo.DelayDateGeneration != null)
+            {
+                ev.RunDateGenerationOn = DateOnly.FromDateTime(DateTime.Today.AddDays(ev.RepeatInfo.DelayDateGeneration.Value));
+            }
+            else
+            {
+                await GenerateDates(ev);
+            }
+        }
+
+        public async Task GenerateDates(DiscordEvent ev)
+        {
+            if (ev.RepeatInfo!.HasAutomaticDateGeneration && DayOfWeekFlagsExtensions.TryParse(ev.RepeatInfo!.DaysOfWeekPattern, out DayOfWeekFlags result))
             {
                 logger.LogInformation("Start generating dates on repeat for event {event}", ev.Name);
                 DateTime nextTarget = ev.StartDateTime.AddDays((7 + (int)ev.RepeatInfo.TargetDayOfWeek! - (int)ev.StartDateTime.DayOfWeek) % 7);
@@ -101,6 +123,17 @@ namespace EventManager.EventRepeat
                 result.ChannelId = ev.EventChannelId;
             }
             return result;
+        }
+
+        public async Task HandleDelayedGenerateDates(ulong guildId)
+        {
+            logger.LogInformation("Running delayed date generation for guild {guild}", guildId);
+            var events = await eventService.GetEventsWithGenerateDatesOn(guildId);
+            foreach (var ev in events)
+            {
+                await GenerateDates(ev!);
+                await eventService.SetEventGenerateDatesOn(ev, null);
+            }
         }
     }
 }

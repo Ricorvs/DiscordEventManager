@@ -6,7 +6,7 @@ using NetCord;
 using NetCord.Hosting.Gateway;
 using NetCord.Rest;
 
-namespace EventManager.RefreshThreads
+namespace EventManager.DailyTasks.RefreshThreads
 {
     public class RefreshThreadsService(RestClient client,
                                        EventService eventService,
@@ -61,6 +61,22 @@ namespace EventManager.RefreshThreads
                 if (thread != null)
                 {
                     await thread.ModifyAsync(thread => thread.Archived = false);
+                }
+            }
+        }
+        public async Task ArchiveThreads(RestGuild guild, GuildConfiguration.GuildConfiguration? configuration)
+        {
+            if (configuration?.EventChannel == null)
+            {
+                return;
+            }
+            logger.LogInformation("Archiving threads for guild {guild} in channel {channel}", guild.Name, configuration.EventChannel);
+            var threads = await guild.GetActiveThreadsAsync();
+            foreach (var thread in threads)
+            {
+                if (thread.ParentId == configuration.EventChannel)
+                {
+                    await thread!.ModifyAsync(tr => tr.Archived = true);
                 }
             }
         }

@@ -56,6 +56,32 @@ namespace EventManager.Events.Services
             return await events.ToArrayAsync();
         }
 
+        public async Task SetEventGenerateDatesOn(DiscordEvent? ev, DateOnly? generateDatesOn)
+        {
+            using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            if (ev == null)
+            {
+                return;
+            }
+            dbContext.Events
+                .Where(discordEvent => discordEvent.Id == ev.Id)
+                .ExecuteUpdate(discordEvent => discordEvent.SetProperty(e => e.RunDateGenerationOn, generateDatesOn));
+            await dbContext.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<DiscordEvent?>> GetEventsWithGenerateDatesOn(ulong guildId)
+        {
+            using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var events = dbContext.Events
+                .Include(ev => ev.RepeatInfo)
+                .Where(ev => ev.GuildId == guildId &&
+                             !ev.Expired &&
+                             ev.AutomaticallyCreated &&
+                             ev.RunDateGenerationOn != null &&
+                             ev.RunDateGenerationOn <= DateOnly.FromDateTime(DateTime.Today));
+            return await events.ToArrayAsync();
+        }
+
         public async Task<DiscordEvent?> SaveEvent(DiscordEvent? ev)
         {
             using var dbContext = await dbContextFactory.CreateDbContextAsync();

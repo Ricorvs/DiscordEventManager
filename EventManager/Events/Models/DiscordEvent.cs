@@ -40,6 +40,7 @@ namespace EventManager.Events.Models
         public bool AutomaticallyCreated { get; set; }
         public GuildScheduledEventEntityType EntityType { get; set; }
         public ulong? EventChannelId { get; set; }
+        public DateOnly? RunDateGenerationOn { get; set; }
         public EventRepeatInfo? RepeatInfo { get; set; }
         public IEnumerable<EventUserInterest>? InterestedUsers { get; }
     }

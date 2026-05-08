@@ -3,33 +3,21 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NetCord.Rest;
 
-namespace EventManager.RefreshThreads
+namespace EventManager.DailyTasks
 {
-    public class RefreshThreadsBackgroundService(RestClient client,
-                                                 GuildConfigurationService guildConfigurationService,
-                                                 ILogger<RefreshThreadsBackgroundService> logger) : BackgroundService
+    public class DailyTasksBackgroundService(RestClient client,
+                                             IEnumerable<IDailyGuildTask> tasks,
+                                             GuildConfigurationService guildConfigurationService,
+                                             ILogger<DailyTasksBackgroundService> logger) : BackgroundService
     {
-        private async Task ArchiveThreads(RestGuild guild, ulong channelId)
-        {
-            logger.LogInformation("Archiving threads for guild {guild} in channel {channel}", guild.Name, channelId);
-            var threads = await guild.GetActiveThreadsAsync();
-            foreach (var thread in threads)
-            {
-                if (thread.ParentId == channelId)
-                {
-                    await thread!.ModifyAsync(tr => tr.Archived = true);
-                }
-            }
-        }
-
         private async void TimerTriggered(object? state)
         {
             RestGuild guild = (RestGuild)state!;
             var config = await guildConfigurationService.GetGuildConfigurationAsync(guild.Id);
 
-            if (config?.EventChannel != null)
+            foreach (var task in tasks)
             {
-                await ArchiveThreads(guild, config.EventChannel.Value);
+                await task.Execute(guild, config);
             }
 
             UpdateTimerTrigger(guild.Id, config);
@@ -51,7 +39,7 @@ namespace EventManager.RefreshThreads
         {
             Timer timer = _timers[guildId];
             var nextTrigger = GetNextTriggerFromConfig(config);
-            logger.LogInformation("Thread refresh timer for guild {guild} will trigger again in {timeremaining}", guildId, nextTrigger);
+            logger.LogInformation("Daily task refresh timer for guild {guild} will trigger again in {timeremaining}", guildId, nextTrigger);
             timer.Change(nextTrigger, Timeout.InfiniteTimeSpan);
         }
 
@@ -64,7 +52,7 @@ namespace EventManager.RefreshThreads
             {
                 var config = await guildConfigurationService.GetGuildConfigurationAsync(guild.Id);
                 var nextTrigger = GetNextTriggerFromConfig(config);
-                logger.LogInformation("Initializing thread refresh timer for guild {guild}, will trigger in {timeremaining}", guild.Id, nextTrigger);
+                logger.LogInformation("Initializing daily task refresh timer for guild {guild}, will trigger in {timeremaining}", guild.Id, nextTrigger);
                 _timers.Add(guild.Id, new(TimerTriggered, guild, nextTrigger, Timeout.InfiniteTimeSpan));
             }
         }

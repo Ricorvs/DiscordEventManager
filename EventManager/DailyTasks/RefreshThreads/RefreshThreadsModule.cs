@@ -1,7 +1,7 @@
 ﻿using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 
-namespace EventManager.RefreshThreads
+namespace EventManager.DailyTasks.RefreshThreads
 {
     public class RefreshThreadsModule(RefreshThreadsService refreshThreadsService) : ApplicationCommandModule<ApplicationCommandContext>
     {
