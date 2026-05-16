@@ -20,42 +20,42 @@ namespace EventManager.Events.Services
 
         public async Task<DiscordEvent> HandleEventAdded(GuildScheduledEvent arg)
         {
-            logger.LogInformation("Event {event} added", arg.Name);
+            logger.LogInformation("Event '{event}' added", arg.Name);
             return await TaskQueue.Enqueue(() => HandleEventAddedOrChanged(arg, true));
         }
 
         public async Task<DiscordEvent> HandleEventChanged(GuildScheduledEvent arg)
         {
-            logger.LogInformation("Event {event} changed", arg.Name);
+            logger.LogInformation("Event '{event}' changed", arg.Name);
             return await TaskQueue.Enqueue(() => HandleEventAddedOrChanged(arg));
         }
 
         public async Task<DiscordEvent?> HandleEventStarted(GuildScheduledEvent arg)
         {
-            logger.LogInformation("Event {event} started", arg.Name);
+            logger.LogInformation("Event '{event}' started", arg.Name);
             return await TaskQueue.Enqueue(() => InternalHandleEventStarted(arg));
         }
 
         public async Task<DiscordEvent?> HandleEventCompleted(GuildScheduledEvent arg)
         {
-            logger.LogInformation("Event {event} completed", arg.Name);
+            logger.LogInformation("Event '{event}' completed", arg.Name);
             return await TaskQueue.Enqueue(() => InternalHandleEventCompleted(null, arg));
         }
         public async Task<DiscordEvent?> HandleEventCompleted(DiscordEvent arg)
         {
-            logger.LogInformation("Event {event} completed", arg.Name);
+            logger.LogInformation("Event '{event}' completed", arg.Name);
             return await TaskQueue.Enqueue(() => InternalHandleEventCompleted(arg, null));
         }
 
         public async Task HandleEventUserInterested(ulong eventId, ulong userId)
         {
-            logger.LogInformation("User {user} interested in event {event}", userId, eventId);
+            logger.LogInformation("User '{user}' interested in event '{event}'", userId, eventId);
             await TaskQueue.Enqueue(() => HandleEventUserChanged(eventId, userId, true));
         }
 
         public async Task HandleEventUserNotInterested(ulong eventId, ulong userId)
         {
-            logger.LogInformation("User {user} no longer interested in event {event}", userId, eventId);
+            logger.LogInformation("User '{user}' no longer interested in event '{event}'", userId, eventId);
             await TaskQueue.Enqueue(() => HandleEventUserChanged(eventId, userId, false));
         }
 
@@ -110,10 +110,6 @@ namespace EventManager.Events.Services
             {
                 (discordEvent, threadChannel) = await HandleRegisterEvent(scheduledEvent);
             }
-            else
-            {
-                discordEvent.Update(scheduledEvent);
-            }
             threadChannel ??= await restclient.GetChannelAsync(discordEvent.ThreadChannelId) as GuildThread;
             if (threadChannel == null)
             {
@@ -122,14 +118,42 @@ namespace EventManager.Events.Services
             return (discordEvent, threadChannel);
         }
 
-        private async Task HandleRemoveAutoRepeatTag(GuildScheduledEvent arg, bool create, DiscordEvent discordEvent, GuildThread threadChannel)
+        private async Task HandleEventChanged(GuildScheduledEvent arg, DiscordEvent discordEvent, GuildThread threadChannel)
         {
-            if (!create && discordEvent.Name!.StartsWith(Constants.AutoRepeatPrefix))
+            await HandleDateChanged(arg, discordEvent, threadChannel);
+            await HandleRemoveAutoRepeatTag(arg, discordEvent, threadChannel);
+            await HandleEventNameChanged(arg, threadChannel);
+        }
+
+        private async Task HandleEventNameChanged(GuildScheduledEvent arg, GuildThread threadChannel)
+        {
+            if (threadChannel.Name != arg.Name)
             {
-                discordEvent.Name = discordEvent.Name.Replace(Constants.AutoRepeatPrefix, string.Empty);
+                logger.LogInformation("Changing channel name from '{oldname}' to '{newname}'", threadChannel.Name, arg.Name);
+                await threadChannel!.ModifyAsync(channel => channel.WithName(arg.Name));
+            }
+        }
+
+        private async Task HandleRemoveAutoRepeatTag(GuildScheduledEvent arg, DiscordEvent discordEvent, GuildThread threadChannel)
+        {
+            if (discordEvent.AutomaticallyCreated)
+            {
+                logger.LogInformation("Removing '{autorepeattag}' from eventname", Constants.AutoRepeatPrefix);
+                discordEvent.Name = arg.Name.Replace(Constants.AutoRepeatPrefix, string.Empty);
                 discordEvent.AutomaticallyCreated = false;
-                await restclient.ModifyGuildScheduledEventAsync(arg.GuildId, arg.Id, ev => ev.WithName(discordEvent.Name));
-                await threadChannel!.ModifyAsync(channel => channel.WithName(discordEvent.Name));
+                if (arg.Name != discordEvent.Name)
+                {
+                    await restclient.ModifyGuildScheduledEventAsync(arg.GuildId, arg.Id, ev => ev.WithName(discordEvent.Name));
+                }
+            }
+        }
+
+        private async Task HandleDateChanged(GuildScheduledEvent arg, DiscordEvent discordEvent, GuildThread threadChannel)
+        {
+            if (arg.ScheduledStartTime.Date != discordEvent.StartDateTime.Date || discordEvent.AutomaticallyCreated)
+            {
+                logger.LogInformation("Event date changed to {date:dddd dd MMMM yyyy}", arg.ScheduledStartTime);
+                await threadChannel.SendMessageAsync(new() { Content = $"Event date changed to {arg.ScheduledStartTime:dddd dd MMMM yyyy}!" });
             }
         }
 
@@ -146,7 +170,11 @@ namespace EventManager.Events.Services
         private async Task<DiscordEvent> HandleEventAddedOrChanged(GuildScheduledEvent arg, bool create = false)
         {
             (DiscordEvent discordEvent, GuildThread threadChannel) = await GetEventInfoForScheduledEvent(arg);
-            await HandleRemoveAutoRepeatTag(arg, create, discordEvent, threadChannel);
+            if (!create)
+            {
+                await HandleEventChanged(arg, discordEvent, threadChannel);
+            }
+            discordEvent.Update(arg);
             await UpdateThreadLinkInDescription(arg, discordEvent);
             await eventService.SaveEvent(discordEvent);
             return discordEvent;

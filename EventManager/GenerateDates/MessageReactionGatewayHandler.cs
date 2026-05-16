@@ -119,10 +119,7 @@ namespace EventManager.GenerateDates
             {
                 return;
             }
-            if (await eventRegistrationService.SetEventDate(channelId, date))
-            {
-                await client.SendMessageAsync(channelId, new() { Content = $"Pinned event date to {date:dddd dd MMMM yyyy}!" });
-            }
+            await eventRegistrationService.SetEventDate(channelId, date);
         }
 
         public async ValueTask HandleAsync(MessageReactionAddEventArgs arg)

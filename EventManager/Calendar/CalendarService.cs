@@ -32,9 +32,14 @@ namespace EventManager.Calendar
             return result + input;
         }
 
+        private static string? NormalizeLineEndings(string? input)
+        {
+            return input?.ReplaceLineEndings("\\n");
+        }
+
         private const string _dateFormat = "yyyyMMddTHHmmssZ";
 
-        private string GetEventEntry(DiscordEvent ev)
+        private static string GetEventEntry(DiscordEvent ev)
         {
             return
             "BEGIN:VEVENT\r\n" +
@@ -42,8 +47,8 @@ namespace EventManager.Calendar
             LimitLineLength(string.Format("DTSTAMP:{0}\r\n", DateTime.UtcNow.ToString(_dateFormat))) +
             LimitLineLength(string.Format("DTSTART:{0}\r\n", ev.StartDateTime.ToString(_dateFormat, CultureInfo.CurrentCulture))) +
             LimitLineLength(string.Format("DTEND:{0}\r\n", (ev.EndDateTime ?? ev.StartDateTime.AddHours(1)).ToString(_dateFormat, CultureInfo.CurrentCulture))) +
-            LimitLineLength(string.Format("SUMMARY:{0}\r\n", ev.Name)) +
-            LimitLineLength(string.Format("DESCRIPTION:{0}\r\n", ev.Description)) +
+            LimitLineLength(string.Format("SUMMARY:{0}\r\n", NormalizeLineEndings(ev.Name))) +
+            LimitLineLength(string.Format("DESCRIPTION:{0}\r\n", NormalizeLineEndings(ev.Description))) +
             "STATUS:CONFIRMED\r\n" +
             "SEQUENCE:0\r\n" +
             "END:VEVENT\r\n";
