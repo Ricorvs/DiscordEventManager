@@ -81,7 +81,7 @@ namespace EventManager.EventRepeat
             {
                 logger.LogInformation("Start generating dates on repeat for event {event}", ev.Name);
                 DateTime nextTarget = ev.StartDateTime.AddDays((7 + (int)ev.RepeatInfo.TargetDayOfWeek! - (int)ev.StartDateTime.DayOfWeek) % 7);
-                await generateDatesService.GenerateDatesAsync(ev.ThreadChannelId, nextTarget, nextTarget.AddDays(7 * ev.RepeatInfo.NumberOfWeeksToGenerate!.Value), result);
+                await generateDatesService.GenerateDatesAsync(ev.ThreadChannelId, nextTarget, nextTarget.AddDays(7 * ev.RepeatInfo.NumberOfWeeksToGenerate!.Value - 1), result);
             }
         }
 

@@ -10,7 +10,7 @@ namespace EventManager.GenerateDates.TypeReaders.DateTypeReader
     {
         private static ApplicationCommandOptionChoiceProperties DateTimeToChoice(DateTime dateTime) =>
             new(dateTime.ToString("dddd dd MMMM yyyy"), dateTime.ToString("dd-MM-yyyy", CultureInfo.CurrentCulture));
-        private const int NumberOfSuggestions = 4;
+        private const int NumberOfSuggestions = 6;
         internal virtual DayOfWeek GetTargetDayOfWeek(ApplicationCommandInteractionDataOption option)
         {
             if (option.Name == Constants.DateFrom)
@@ -47,7 +47,7 @@ namespace EventManager.GenerateDates.TypeReaders.DateTypeReader
             }
             else if (option.Value != null && option.Value.Length <= 2 && int.TryParse(option.Value, out int day) && day <= 31)
             {
-                options = GetChoicesForDatePrefill(option.Value, startingReferenceDate, day);
+                options = GetChoicesForDatePrefill(startingReferenceDate, day);
             }
             options ??= GetDefaultChoices(startingReferenceDate, targetDayOfWeek, isEndDate);
             options.Sort();
@@ -57,7 +57,7 @@ namespace EventManager.GenerateDates.TypeReaders.DateTypeReader
         private static List<DateTime> GetDefaultChoices(DateTime startingReferenceDate, DayOfWeek targetDayOfWeek, bool isEndDate)
         {
             List<DateTime> options = [];
-            if (!isEndDate)
+            if (!isEndDate && !options.Contains(startingReferenceDate))
             {
                 options.Add(startingReferenceDate);
             }
@@ -89,28 +89,18 @@ namespace EventManager.GenerateDates.TypeReaders.DateTypeReader
             return options;
         }
 
-        private static List<DateTime> GetChoicesForDatePrefill(string prefill, DateTime startingReferenceDate, int day)
+        private static List<DateTime> GetChoicesForDatePrefill(DateTime startingReferenceDate, int day)
         {
             List<DateTime> options = [];
             DateTime referenceDate;
-            while (!DateTime.TryParseExact($"{day}-{startingReferenceDate:MM-yyyy}", "dd-MM-yyyy", CultureInfo.CurrentCulture, DateTimeStyles.None, out referenceDate))
+            int daysOfMonth = DateTime.DaysInMonth(startingReferenceDate.Year, startingReferenceDate.Month);
+            while (day > daysOfMonth)
             {
                 startingReferenceDate = startingReferenceDate.AddMonths(1);
+                daysOfMonth = DateTime.DaysInMonth(startingReferenceDate.Year, startingReferenceDate.Month);
             }
-            if (day <= 3 && DateTime.TryParseExact($"{day}0-{referenceDate:MM-yyyy}", "dd-MM-yyyy", CultureInfo.CurrentCulture, DateTimeStyles.None, out DateTime dayPrefixReferenceDate))
-            {
-                while (dayPrefixReferenceDate.Day.ToString().StartsWith(prefill))
-                {
-                    DateTime target = dayPrefixReferenceDate > startingReferenceDate
-                                    ? dayPrefixReferenceDate
-                                    : dayPrefixReferenceDate.AddMonths(1);
-                    if (target.Day.ToString().StartsWith(prefill))
-                    {
-                        options.Add(target);
-                    }
-                    dayPrefixReferenceDate = dayPrefixReferenceDate.AddDays(1);
-                }
-            }
+            GetChoicesForDatePrefillTens(startingReferenceDate, day, options, daysOfMonth);
+            referenceDate = new(startingReferenceDate.Year, startingReferenceDate.Month, day);
             if (referenceDate < startingReferenceDate)
             {
                 referenceDate = referenceDate.AddMonths(1);
@@ -120,6 +110,26 @@ namespace EventManager.GenerateDates.TypeReaders.DateTypeReader
                 options.Add(referenceDate.AddMonths(i));
             }
             return options;
+        }
+
+        private static void GetChoicesForDatePrefillTens(DateTime startingReferenceDate, int day, List<DateTime> options, int daysOfMonth)
+        {
+            if (day <= 3)
+            {
+                day *= 10;
+                for (int i = 0; i < 10 && day + i < daysOfMonth; i++)
+                {
+                    DateTime newDate = new(startingReferenceDate.Year, startingReferenceDate.Month, day + i);
+                    if (newDate < startingReferenceDate)
+                    {
+                        newDate = newDate.AddMonths(1);
+                    }
+                    if (newDate.Day == day + i)
+                    {
+                        options.Add(newDate);
+                    }
+                }
+            }
         }
     }
 }
