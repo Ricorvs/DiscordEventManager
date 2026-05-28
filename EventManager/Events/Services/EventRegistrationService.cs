@@ -127,7 +127,7 @@ namespace EventManager.Events.Services
 
         private async Task HandleEventNameChanged(GuildScheduledEvent arg, GuildThread threadChannel)
         {
-            if (threadChannel.Name != arg.Name)
+            if (threadChannel.Name != arg.Name && !arg.Name.Contains(Constants.AutoRepeatPrefix))
             {
                 logger.LogInformation("Changing channel name from '{oldname}' to '{newname}'", threadChannel.Name, arg.Name);
                 await threadChannel!.ModifyAsync(channel => channel.WithName(arg.Name));
